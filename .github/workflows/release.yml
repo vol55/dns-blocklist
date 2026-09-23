@@ -56,5 +56,5 @@ jobs:
       - name: Build
         run: ./update.sh
 
-      - name: Publish
-        run: ./publish.sh
+      - name: Upload
+        run: ./upload.sh
