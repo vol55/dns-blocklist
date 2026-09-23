@@ -1,33 +1,37 @@
 #!/bin/bash
 set -euo pipefail
 
-RELEASE_TAG="latest"
-RELEASE_TITLE="dns-blocklist"
 OUTPUT="dns-blocklist.srs"
+RELEASE_TAG="build-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+RELEASE_TITLE="dns-blocklist"
 
 [[ -s "$OUTPUT" ]] || {
   echo "$OUTPUT not found or empty" >&2
   exit 1
 }
 
-echo "Updating tag '$RELEASE_TAG'..."
-git tag -f "$RELEASE_TAG" "$GITHUB_SHA"
-git push origin "refs/tags/$RELEASE_TAG" --force
+echo "Creating release '$RELEASE_TAG'..."
 
-echo "Publishing release..."
-if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-  echo "Release '$RELEASE_TAG' already exists, updating asset..."
+gh release create "$RELEASE_TAG" \
+  "$OUTPUT" \
+  --title "$RELEASE_TITLE" \
+  --target "$GITHUB_SHA" \
+  --latest
 
-  gh release upload "$RELEASE_TAG" \
-    "$OUTPUT" \
-    --clobber
-else
-  echo "Creating release '$RELEASE_TAG'..."
-  gh release create "$RELEASE_TAG" \
-    "$OUTPUT" \
-    --title "$RELEASE_TITLE" \
-    --latest \
-    --verify-tag
-fi
+echo "Removing old releases..."
+
+while IFS= read -r tag; do
+  [[ "$tag" == "$RELEASE_TAG" ]] && continue
+
+  echo "Deleting release '$tag'..."
+  gh release delete "$tag" \
+    --cleanup-tag \
+    --yes
+done < <(
+  gh release list \
+    --limit 1000 \
+    --json tagName \
+    --jq '.[].tagName'
+)
 
 echo "Release published"
