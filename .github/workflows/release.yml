@@ -28,7 +28,7 @@ jobs:
 
       - name: Cache sing-box
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/sing-box
           key: sing-box-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.version }}
