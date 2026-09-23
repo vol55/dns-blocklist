@@ -3,8 +3,8 @@ name: update blocklist
 on:
   workflow_dispatch:
   schedule:
-    - cron: "20 */12 * * *"
-    
+    - cron: "0 */12 * * *"
+
 permissions:
   contents: write
 
@@ -12,11 +12,49 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      GH_TOKEN: ${{ github.token }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Build and publish
+      - name: Get sing-box version
+        id: version
+        run: |
+          version="$(gh api repos/SagerNet/sing-box/releases/latest \
+            --jq '.tag_name | ltrimstr("v")')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache sing-box
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/sing-box
+          key: sing-box-${{ runner.os }}-${{ runner.arch }}-${{ steps.version.outputs.version }}
+
+      - name: Download sing-box
+        if: steps.cache.outputs.cache-hit != 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash update-blocklist.sh
+          SING_BOX_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p "$HOME/.cache/sing-box"
+
+          curl -fL \
+            --connect-timeout 10 \
+            --max-time 120 \
+            --retry 3 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            "https://github.com/SagerNet/sing-box/releases/download/v${SING_BOX_VERSION}/sing-box-${SING_BOX_VERSION}-linux-amd64.tar.gz" \
+            -o /tmp/sing-box.tar.gz
+          tar -xzf /tmp/sing-box.tar.gz -C /tmp
+          install -m 0755 \
+            "/tmp/sing-box-${SING_BOX_VERSION}-linux-amd64/sing-box" \
+            "$HOME/.cache/sing-box/sing-box"
+
+      - name: Build
+        run: ./update.sh
+
+      - name: Publish
+        run: ./publish.sh
