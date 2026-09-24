@@ -57,4 +57,4 @@ jobs:
         run: ./update.sh
 
       - name: Upload
-        run: ./upload.sh
+        run: ./push.sh
