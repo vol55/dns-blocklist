@@ -54,7 +54,7 @@ jobs:
             "$HOME/.cache/sing-box/sing-box"
 
       - name: Build
-        run: ./update.sh
+        run: ./.github/update.sh
 
       - name: Upload
-        run: ./push.sh
+        run: ./.github/push.sh
